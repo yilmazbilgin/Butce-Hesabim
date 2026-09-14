@@ -540,31 +540,51 @@ private fun PaymentRow(
     onPaid: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val isIncome = record.type == "Gelir"
+    val statusText = when {
+        isIncome -> "GEL\u0130R"
+        record.paid -> "\u00d6DEND\u0130"
+        else -> "BEKL\u0130YOR"
+    }
+    val statusColor = when {
+        isIncome -> Color(0xFF2E7D32)
+        record.paid -> Color(0xFF2E7D32)
+        else -> Color(0xFFC62828)
+    }
+
     Card(
         Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(11.dp),
+        shape = RoundedCornerShape(13.dp),
         colors = CardDefaults.cardColors(
-            containerColor =
-                if (record.paid) Color(0xFFEAF4EC)
-                else Color.White
+            containerColor = if (record.paid || isIncome)
+                Color(0xFFEAF4EC)
+            else
+                Color.White
         )
     ) {
-        Column(Modifier.padding(7.dp)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        record.note.ifBlank {
-                            if (record.type == "Gelir") "Gelir" else "\u00d6deme"
-                        },
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                Text(
+                    record.note.ifBlank {
+                        if (isIncome) "Gelir" else "\u00d6deme"
+                    },
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         dateText(record.date),
                         fontSize = 10.sp,
@@ -572,59 +592,70 @@ private fun PaymentRow(
                     )
                     if (record.installment.isNotBlank()) {
                         Text(
-                            "Taksit: ${record.installment}",
+                            "  \u2022  ${record.installment}",
                             fontSize = 10.sp,
-                            color = Color(0xFF77737A)
+                            color = Color(0xFF77737A),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
-                Spacer(Modifier.width(8.dp))
-
                 Text(
-                    if (record.type == "Gelir")
+                    statusText,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = statusColor
+                )
+            }
+
+            Spacer(Modifier.width(6.dp))
+
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    if (isIncome)
                         "+ ${moneyStatic(record.amount)}"
                     else
                         "- ${moneyStatic(record.amount)}",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color =
-                        if (record.type == "Gelir")
-                            Color(0xFF2E7D32)
-                        else
-                            Color(0xFFC62828),
+                    color = if (isIncome)
+                        Color(0xFF2E7D32)
+                    else
+                        Color(0xFFC62828),
                     maxLines = 1
                 )
-            }
 
-            if (record.type == "Gider") {
-                Spacer(Modifier.height(3.dp))
                 Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    if (!record.paid) {
-                        Button(
+                    if (!isIncome && !record.paid) {
+                        OutlinedButton(
                             onClick = onPaid,
-                            Modifier.weight(1f),
-                            shape = RoundedCornerShape(10.dp)
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                horizontal = 8.dp,
+                                vertical = 0.dp
+                            ),
+                            modifier = Modifier.height(30.dp),
+                            shape = RoundedCornerShape(8.dp)
                         ) {
                             Text("\u00d6dendi", fontSize = 10.sp)
                         }
                     }
 
-                    OutlinedButton(
+                    TextButton(
                         onClick = onDelete,
-                        Modifier.weight(1f),
-                        shape = RoundedCornerShape(10.dp)
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            horizontal = 7.dp,
+                            vertical = 0.dp
+                        ),
+                        modifier = Modifier.height(30.dp)
                     ) {
                         Text("Sil", fontSize = 10.sp)
                     }
-                }
-            } else {
-                Spacer(Modifier.height(3.dp))
-                TextButton(onClick = onDelete) {
-                    Text("Sil", fontSize = 10.sp)
                 }
             }
         }
