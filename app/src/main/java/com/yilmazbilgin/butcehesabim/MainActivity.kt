@@ -121,7 +121,72 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {
         }
+        expandInstallments(result)
+        if (result.isNotEmpty()) saveRecords(result)
         return result
+    }
+
+    private fun expandInstallments(records: MutableList<BudgetRecord>) {
+        val original = records.toList()
+        val additions = mutableListOf<BudgetRecord>()
+
+        for (record in original) {
+            if (record.type != "Gider") continue
+
+            val raw = record.installment.trim()
+            val totalParts = raw.substringAfterLast("/").toIntOrNull()
+                ?: raw.toIntOrNull()
+                ?: continue
+
+            if (totalParts <= 1) continue
+
+            val currentPart = raw.substringBefore("/").toIntOrNull() ?: 1
+            if (currentPart < 1 || currentPart > totalParts) continue
+
+            val baseDate = try {
+                LocalDate.parse(record.date)
+            } catch (_: Exception) {
+                continue
+            }
+
+            for (part in (currentPart + 1)..totalParts) {
+                val futureDate = baseDate.plusMonths((part - currentPart).toLong())
+                val exists = records.any {
+                    it.type == "Gider" &&
+                    it.date == futureDate.toString() &&
+                    it.note == record.note &&
+                    kotlin.math.abs(it.amount - record.amount) < 0.01 &&
+                    it.installment == "$part/$totalParts"
+                } || additions.any {
+                    it.type == "Gider" &&
+                    it.date == futureDate.toString() &&
+                    it.note == record.note &&
+                    kotlin.math.abs(it.amount - record.amount) < 0.01 &&
+                    it.installment == "$part/$totalParts"
+                }
+
+                if (!exists) {
+                    additions.add(
+                        record.copy(
+                            id = record.id + part.toLong() * 1000000L,
+                            date = futureDate.toString(),
+                            paid = false,
+                            installment = "$part/$totalParts"
+                        )
+                    )
+                }
+            }
+
+            // Normalize the first installment label when it was entered as just "8".
+            val index = records.indexOfFirst { it.id == record.id }
+            if (index >= 0 && !raw.contains("/")) {
+                records[index] = records[index].copy(
+                    installment = "$currentPart/$totalParts"
+                )
+            }
+        }
+
+        records.addAll(additions)
     }
 
     private fun saveRecords(records: List<BudgetRecord>) {
