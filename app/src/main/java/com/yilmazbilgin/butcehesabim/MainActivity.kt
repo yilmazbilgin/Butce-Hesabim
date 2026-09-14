@@ -134,13 +134,21 @@ class MainActivity : ComponentActivity() {
             if (record.type != "Gider") continue
 
             val raw = record.installment.trim()
-            val totalParts = raw.substringAfterLast("/").toIntOrNull()
-                ?: raw.toIntOrNull()
-                ?: continue
+            val hasSlash = raw.contains("/")
+            val totalParts = if (hasSlash) {
+                raw.substringAfterLast("/").toIntOrNull()
+            } else {
+                raw.toIntOrNull()
+            } ?: continue
 
             if (totalParts <= 1) continue
 
-            val currentPart = raw.substringBefore("/").toIntOrNull() ?: 1
+            val currentPart = if (hasSlash) {
+                raw.substringBefore("/").toIntOrNull() ?: 1
+            } else {
+                1
+            }
+
             if (currentPart < 1 || currentPart > totalParts) continue
 
             val baseDate = try {
@@ -149,7 +157,8 @@ class MainActivity : ComponentActivity() {
                 continue
             }
 
-            for (part in (currentPart + 1)..totalParts) {
+            var part = currentPart + 1
+            while (part <= totalParts) {
                 val futureDate = baseDate.plusMonths((part - currentPart).toLong())
                 val exists = records.any {
                     it.type == "Gider" &&
@@ -175,6 +184,7 @@ class MainActivity : ComponentActivity() {
                         )
                     )
                 }
+                part++
             }
 
             // Normalize the first installment label when it was entered as just "8".
