@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -28,6 +29,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -35,15 +37,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.json.JSONArray
@@ -55,994 +57,829 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 data class BudgetRecord(
+    val id: Long,
     val date: String,
     val type: String,
     val amount: Double,
-    val note: String
+    val note: String,
+    val paid: Boolean = false,
+    val installment: String = ""
 )
 
 class MainActivity : ComponentActivity() {
 
+    private val prefs by lazy {
+        getSharedPreferences("butce_hesabim", MODE_PRIVATE)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
             MaterialTheme {
-                BudgetApp()
-            }
-        }
-    }
-}
-
-@Composable
-fun BudgetApp() {
-
-    val context = androidx.compose.ui.platform.LocalContext.current
-
-    val prefs = remember {
-        context.getSharedPreferences("butce_hesabim", 0)
-    }
-
-    val records = remember {
-        mutableStateListOf<BudgetRecord>().apply {
-            val saved = prefs.getString("records", "[]") ?: "[]"
-
-            try {
-                val array = JSONArray(saved)
-
-                for (i in 0 until array.length()) {
-                    val obj = array.getJSONObject(i)
-
-                    add(
-                        BudgetRecord(
-                            date = obj.getString("date"),
-                            type = obj.getString("type"),
-                            amount = obj.getDouble("amount"),
-                            note = obj.getString("note")
-                        )
-                    )
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    BudgetApp()
                 }
-            } catch (_: Exception) {
             }
         }
     }
 
-    fun saveRecords() {
+    private fun loadRecords(): MutableList<BudgetRecord> {
+        val result = mutableListOf<BudgetRecord>()
+        val saved = prefs.getString("records", "[]") ?: "[]"
 
-        val array = JSONArray()
-
-        records.forEach { record ->
-
-            val obj = JSONObject()
-
-            obj.put("date", record.date)
-            obj.put("type", record.type)
-            obj.put("amount", record.amount)
-            obj.put("note", record.note)
-
-            array.put(obj)
-        }
-
-        prefs.edit()
-            .putString("records", array.toString())
-            .apply()
-    }
-
-    var selectedMonthText by rememberSaveable {
-        mutableStateOf(YearMonth.now().toString())
-    }
-
-    val selectedMonth = YearMonth.parse(selectedMonthText)
-
-    var selectedDateText by rememberSaveable {
-        mutableStateOf(LocalDate.now().toString())
-    }
-
-    val selectedDate = LocalDate.parse(selectedDateText)
-
-    var salaryText by rememberSaveable {
-        mutableStateOf(
-            prefs.getString(
-                "salary_${selectedMonth.year}_${selectedMonth.monthValue}",
-                ""
-            ) ?: ""
-        )
-    }
-
-    var showAddDialog by remember {
-        mutableStateOf(false)
-    }
-
-    var dialogType by remember {
-        mutableStateOf("Gider")
-    }
-
-    var dialogAmount by remember {
-        mutableStateOf("")
-    }
-
-    var dialogNote by remember {
-        mutableStateOf("")
-    }
-
-    val monthPrefix =
-        "${selectedMonth.year}-${String.format("%02d", selectedMonth.monthValue)}"
-
-    val monthRecords = records.filter {
-        it.date.startsWith(monthPrefix)
-    }
-
-    val salary =
-        salaryText.replace(",", ".").toDoubleOrNull() ?: 0.0
-
-    val recordIncome =
-        monthRecords
-            .filter { it.type == "Gelir" }
-            .sumOf { it.amount }
-
-    val totalIncome = salary + recordIncome
-
-    val totalExpense =
-        monthRecords
-            .filter { it.type == "Gider" }
-            .sumOf { it.amount }
-
-    val remaining = totalIncome - totalExpense
-
-    val monthFormatter =
-        DateTimeFormatter.ofPattern("MMMM yyyy", Locale("tr", "TR"))
-
-    val displayMonth =
-        selectedMonth.atDay(1).format(monthFormatter)
-            .replaceFirstChar { it.uppercase(Locale("tr", "TR")) }
-
-    fun money(value: Double): String {
-        return NumberFormat
-            .getNumberInstance(Locale("tr", "TR"))
-            .apply {
-                minimumFractionDigits = 2
-                maximumFractionDigits = 2
-            }
-            .format(value) + " ₺"
-    }
-
-    fun changeMonth(amount: Long) {
-
-        val newMonth = selectedMonth.plusMonths(amount)
-
-        selectedMonthText = newMonth.toString()
-
-        salaryText =
-            prefs.getString(
-                "salary_${newMonth.year}_${newMonth.monthValue}",
-                ""
-            ) ?: ""
-
-        selectedDateText =
-            newMonth.atDay(1).toString()
-    }
-
-    fun saveSalary() {
-
-        prefs.edit()
-            .putString(
-                "salary_${selectedMonth.year}_${selectedMonth.monthValue}",
-                salaryText
-            )
-            .apply()
-    }
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF8F7FA))
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-
-        item {
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Text(
-                text = "💰 Bütçe Hesabım",
-                fontSize = 31.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(3.dp))
-
-            Text(
-                text = "Gelir ve giderlerini kolayca takip et.",
-                fontSize = 16.sp,
-                color = Color(0xFF5F5B63)
-            )
-        }
-
-        item {
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(26.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFEDE8F0)
+        try {
+            val array = JSONArray(saved)
+            for (i in 0 until array.length()) {
+                val o = array.getJSONObject(i)
+                result.add(
+                    BudgetRecord(
+                        id = o.optLong("id", System.currentTimeMillis() + i),
+                        date = o.optString("date"),
+                        type = o.optString("type"),
+                        amount = o.optDouble("amount", 0.0),
+                        note = o.optString("note"),
+                        paid = o.optBoolean("paid", false),
+                        installment = o.optString("installment")
+                    )
                 )
-            ) {
+            }
+        } catch (_: Exception) {
+        }
+        return result
+    }
 
-                Column(
-                    modifier = Modifier.padding(22.dp)
+    private fun saveRecords(records: List<BudgetRecord>) {
+        val array = JSONArray()
+        records.forEach { r ->
+            array.put(
+                JSONObject().apply {
+                    put("id", r.id)
+                    put("date", r.date)
+                    put("type", r.type)
+                    put("amount", r.amount)
+                    put("note", r.note)
+                    put("paid", r.paid)
+                    put("installment", r.installment)
+                }
+            )
+        }
+        prefs.edit().putString("records", array.toString()).apply()
+    }
+
+    private fun money(value: Double): String =
+        NumberFormat.getNumberInstance(Locale("tr", "TR")).apply {
+            minimumFractionDigits = 0
+            maximumFractionDigits = 2
+        }.format(value) + " 鈧�"
+
+    private fun dateText(date: String): String {
+        return try {
+            val d = LocalDate.parse(date)
+            "%02d.%02d.%04d".format(
+                Locale("tr", "TR"),
+                d.dayOfMonth,
+                d.monthValue,
+                d.year
+            )
+        } catch (_: Exception) {
+            date
+        }
+    }
+
+    @Composable
+    private fun BudgetApp() {
+        val records = remember {
+            mutableStateListOf<BudgetRecord>().apply { addAll(loadRecords()) }
+        }
+
+        var monthText by rememberSaveable {
+            mutableStateOf(YearMonth.now().toString())
+        }
+        var selectedDateText by rememberSaveable {
+            mutableStateOf(LocalDate.now().toString())
+        }
+        var showDialog by remember { mutableStateOf(false) }
+        var dialogType by remember { mutableStateOf("Gider") }
+        var dialogAmount by remember { mutableStateOf("") }
+        var dialogNote by remember { mutableStateOf("") }
+        var dialogInstallment by remember { mutableStateOf("") }
+
+        val month = YearMonth.parse(monthText)
+        val selectedDate = LocalDate.parse(selectedDateText)
+        val prefix = month.toString()
+
+        val monthRecords = records.filter { it.date.startsWith(prefix) }
+        val expenses = monthRecords.filter { it.type == "Gider" }
+        val incomes = monthRecords.filter { it.type == "Gelir" }
+
+        var salaryText by remember(monthText) {
+            mutableStateOf(
+                prefs.getString(
+                    "salary_${month.year}_${month.monthValue}",
+                    ""
+                ) ?: ""
+            )
+        }
+
+        val salary = salaryText.replace(",", ".").toDoubleOrNull() ?: 0.0
+        val totalIncome = salary + incomes.sumOf { it.amount }
+        val totalExpense = expenses.sumOf { it.amount }
+        val remaining = totalIncome - totalExpense
+
+        val monthTitle = month.atDay(1).format(
+            DateTimeFormatter.ofPattern("MMMM yyyy", Locale("tr", "TR"))
+        ).replaceFirstChar { it.uppercase(Locale("tr", "TR")) }
+
+        fun changeMonth(delta: Long) {
+            val next = month.plusMonths(delta)
+            monthText = next.toString()
+            selectedDateText = next.atDay(1).toString()
+        }
+
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF7F6F8))
+                .padding(horizontal = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "B眉t莽e Hesab谋m",
+                    fontSize = 23.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Gelir, gider ve 枚demelerini takip et",
+                    fontSize = 13.sp,
+                    color = Color(0xFF66636A)
+                )
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFEAE6EE)
+                    )
                 ) {
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-
-                        Text(
-                            text = displayMonth,
-                            fontSize = 25.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Row {
-
-                            TextButton(
-                                onClick = {
-                                    changeMonth(-1)
+                    Column(Modifier.padding(14.dp)) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                monthTitle,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                TextButton({ changeMonth(-1) }) {
+                                    Text("鈥�", fontSize = 24.sp)
                                 }
-                            ) {
-                                Text(
-                                    text = "‹",
-                                    fontSize = 30.sp
-                                )
-                            }
-
-                            TextButton(
-                                onClick = {
-                                    changeMonth(1)
+                                TextButton({ changeMonth(1) }) {
+                                    Text("鈥�", fontSize = 24.sp)
                                 }
-                            ) {
-                                Text(
-                                    text = "›",
-                                    fontSize = 30.sp
-                                )
                             }
                         }
+
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(7.dp)
+                        ) {
+                            SummaryBox(
+                                "Gelir",
+                                money(totalIncome),
+                                Color(0xFF2E7D32),
+                                Modifier.weight(1f)
+                            )
+                            SummaryBox(
+                                "Gider",
+                                money(totalExpense),
+                                Color(0xFFC62828),
+                                Modifier.weight(1f)
+                            )
+                            SummaryBox(
+                                "Kalan",
+                                money(remaining),
+                                if (remaining >= 0) Color(0xFF2E7D32)
+                                else Color(0xFFC62828),
+                                Modifier.weight(1f)
+                            )
+                        }
                     }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = "Toplam Gelir",
-                        fontSize = 16.sp,
-                        color = Color(0xFF5F5B63)
-                    )
-
-                    Text(
-                        text = money(totalIncome),
-                        fontSize = 27.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = "Toplam Gider",
-                        fontSize = 16.sp,
-                        color = Color(0xFF5F5B63)
-                    )
-
-                    Text(
-                        text = money(totalExpense),
-                        fontSize = 27.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    HorizontalDivider()
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = "Kalan",
-                        fontSize = 16.sp,
-                        color = Color(0xFF5F5B63)
-                    )
-
-                    Text(
-                        text = money(remaining),
-                        fontSize = 31.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (remaining >= 0)
-                            Color(0xFF218B4B)
-                        else
-                            Color(0xFFD32F2F)
-                    )
                 }
             }
-        }
 
-        item {
-
-            CalendarCard(
-                month = selectedMonth,
-                records = records,
-                selectedDate = selectedDate,
-                onDateSelected = {
-                    selectedDateText = it.toString()
-                }
-            )
-        }
-
-        item {
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFEDE8F0)
+            item {
+                CalendarCard(
+                    month = month,
+                    records = records,
+                    selectedDate = selectedDate,
+                    onDateSelected = { selectedDateText = it.toString() }
                 )
-            ) {
+            }
 
-                Column(
-                    modifier = Modifier.padding(18.dp)
+            item {
+                Card(
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp)
                 ) {
-
-                    Text(
-                        text = "💰 Maaş / Sabit Gelir",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = "$displayMonth için aylık maaşını gir.",
-                        color = Color(0xFF65606A)
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = salaryText,
-                        onValueChange = {
-                            salaryText = it
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = {
-                            Text("Aylık maaş / sabit gelir")
-                        },
-                        placeholder = {
-                            Text("Örn: 66565")
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal
+                    Column(Modifier.padding(14.dp)) {
+                        Text(
+                            "Maa艧 / Sabit Gelir",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
                         )
-                    )
+                        Spacer(Modifier.height(7.dp))
+                        OutlinedTextField(
+                            value = salaryText,
+                            onValueChange = { salaryText = it },
+                            Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("Ayl谋k gelir") },
+                            placeholder = { Text("脰rn. 66565") },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal
+                            )
+                        )
+                        Spacer(Modifier.height(7.dp))
+                        Button(
+                            onClick = {
+                                prefs.edit()
+                                    .putString(
+                                        "salary_${month.year}_${month.monthValue}",
+                                        salaryText
+                                    )
+                                    .apply()
+                            },
+                            Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Maa艧谋 Kaydet", fontSize = 14.sp)
+                        }
+                    }
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+            item {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            dialogType = "Gelir"
+                            dialogAmount = ""
+                            dialogNote = ""
+                            dialogInstallment = ""
+                            showDialog = true
+                        },
+                        Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("+ Gelir", fontSize = 14.sp)
+                    }
 
                     Button(
                         onClick = {
-                            saveSalary()
+                            dialogType = "Gider"
+                            dialogAmount = ""
+                            dialogNote = ""
+                            dialogInstallment = ""
+                            showDialog = true
                         },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp)
+                        Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Maaşı Kaydet")
+                        Text("+ Gider", fontSize = 14.sp)
                     }
                 }
             }
-        }
 
-        item {
+            item {
+                SectionTitle("Yakla艧an 脰demeler")
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-
-                Button(
-                    onClick = {
-                        dialogType = "Gelir"
-                        dialogAmount = ""
-                        dialogNote = ""
-                        showAddDialog = true
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(18.dp)
-                ) {
-                    Text("+ Gelir")
-                }
-
-                Button(
-                    onClick = {
-                        dialogType = "Gider"
-                        dialogAmount = ""
-                        dialogNote = ""
-                        showAddDialog = true
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(18.dp)
-                ) {
-                    Text("+ Gider")
-                }
-            }
-        }
-
-        item {
-
-            Text(
-                text = "📅 Yaklaşan Ödemeler",
-                fontSize = 23.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            val today = LocalDate.now()
-
-            val upcoming =
-                records
+                val today = LocalDate.now()
+                val upcoming = records
                     .filter {
                         it.type == "Gider" &&
-                        LocalDate.parse(it.date).isAfter(today)
+                        !it.paid &&
+                        !LocalDate.parse(it.date).isBefore(today)
                     }
-                    .sortedBy {
-                        LocalDate.parse(it.date)
-                    }
+                    .sortedBy { it.date }
                     .take(5)
 
-            if (upcoming.isEmpty()) {
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFEDE8F0)
-                    )
-                ) {
-
-                    Text(
-                        text = "Yaklaşan bekleyen ödeme yok.",
-                        modifier = Modifier.padding(20.dp),
-                        fontSize = 16.sp
-                    )
-                }
-
-            } else {
-
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-
-                    upcoming.forEach { record ->
-
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(18.dp)
-                        ) {
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-
-                                Column {
-
-                                    Text(
-                                        text = record.note.ifBlank {
-                                            "Gider"
-                                        },
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 17.sp
-                                    )
-
-                                    Text(
-                                        text = formatDate(record.date),
-                                        color = Color.Gray
-                                    )
-                                }
-
-                                Text(
-                                    text = money(record.amount),
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFD32F2F)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-
-            Text(
-                text = "📋 Bu Ayın Kayıtları",
-                fontSize = 23.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            if (monthRecords.isEmpty()) {
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFEDE8F0)
-                    )
-                ) {
-
-                    Text(
-                        text = "Bu ay henüz kayıt yok.",
-                        modifier = Modifier.padding(20.dp)
-                    )
-                }
-
-            } else {
-
-                monthRecords
-                    .sortedByDescending {
-                        LocalDate.parse(it.date)
-                    }
-                    .forEach { record ->
-
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    records.remove(record)
-                                    saveRecords()
+                if (upcoming.isEmpty()) {
+                    EmptyCard("Yakla艧an bekleyen 枚deme yok.")
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        upcoming.forEach { record ->
+                            PaymentRow(
+                                record = record,
+                                onPaid = {
+                                    val index =
+                                        records.indexOfFirst { it.id == record.id }
+                                    if (index >= 0) {
+                                        records[index] =
+                                            records[index].copy(paid = true)
+                                        saveRecords(records)
+                                    }
                                 },
-                            shape = RoundedCornerShape(18.dp)
-                        ) {
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-
-                                Column(
-                                    modifier = Modifier.weight(1f)
-                                ) {
-
-                                    Text(
-                                        text = record.note.ifBlank {
-                                            record.type
-                                        },
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 17.sp
-                                    )
-
-                                    Text(
-                                        text = formatDate(record.date),
-                                        color = Color.Gray
-                                    )
+                                onDelete = {
+                                    records.removeAll { it.id == record.id }
+                                    saveRecords(records)
                                 }
-
-                                Text(
-                                    text =
-                                        if (record.type == "Gelir")
-                                            "+ ${money(record.amount)}"
-                                        else
-                                            "- ${money(record.amount)}",
-                                    fontWeight = FontWeight.Bold,
-                                    color =
-                                        if (record.type == "Gelir")
-                                            Color(0xFF218B4B)
-                                        else
-                                            Color(0xFFD32F2F)
-                                )
-                            }
+                            )
                         }
                     }
-
-                Text(
-                    text = "Kayıt silmek için karta dokunabilirsin.",
-                    fontSize = 13.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
+                }
             }
+
+            item {
+                SectionTitle("Bu Ay谋n Kay谋tlar谋")
+
+                if (monthRecords.isEmpty()) {
+                    EmptyCard("Bu ay hen眉z kay谋t yok.")
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        monthRecords
+                            .sortedByDescending { it.date }
+                            .forEach { record ->
+                                PaymentRow(
+                                    record = record,
+                                    onPaid = {
+                                        val index =
+                                            records.indexOfFirst { it.id == record.id }
+                                        if (index >= 0) {
+                                            records[index] =
+                                                records[index].copy(paid = true)
+                                            saveRecords(records)
+                                        }
+                                    },
+                                    onDelete = {
+                                        records.removeAll { it.id == record.id }
+                                        saveRecords(records)
+                                    }
+                                )
+                            }
+                    }
+                }
+            }
+
+            item { Spacer(Modifier.height(20.dp)) }
         }
 
-        item {
-            Spacer(modifier = Modifier.height(30.dp))
+        if (showDialog) {
+            AddRecordDialog(
+                type = dialogType,
+                amount = dialogAmount,
+                note = dialogNote,
+                installment = dialogInstallment,
+                selectedDate = selectedDate,
+                onAmountChange = { dialogAmount = it },
+                onNoteChange = { dialogNote = it },
+                onInstallmentChange = { dialogInstallment = it },
+                onDateChange = { selectedDateText = it.toString() },
+                onDismiss = { showDialog = false },
+                onSave = {
+                    val amount =
+                        dialogAmount.replace(",", ".").toDoubleOrNull()
+
+                    if (amount != null && amount > 0) {
+                        records.add(
+                            BudgetRecord(
+                                id = System.currentTimeMillis(),
+                                date = selectedDate.toString(),
+                                type = dialogType,
+                                amount = amount,
+                                note = dialogNote.trim(),
+                                paid = dialogType == "Gelir",
+                                installment = dialogInstallment.trim()
+                            )
+                        )
+                        saveRecords(records)
+                        showDialog = false
+                    }
+                }
+            )
         }
     }
+}
 
-    if (showAddDialog) {
+@Composable
+private fun SummaryBox(
+    title: String,
+    value: String,
+    valueColor: Color,
+    modifier: Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(13.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(
+            Modifier.padding(9.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                title,
+                fontSize = 11.sp,
+                color = Color(0xFF66636A)
+            )
+            Text(
+                value,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = valueColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
 
-        AlertDialog(
-            onDismissRequest = {
-                showAddDialog = false
-            },
-            title = {
-                Text(
-                    text = if (dialogType == "Gelir")
-                        "Yeni Gelir"
-                    else
-                        "Yeni Gider"
-                )
-            },
-            text = {
+@Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.Bold
+    )
+    Spacer(Modifier.height(3.dp))
+}
 
-                Column {
-
-                    Text(
-                        text = "Tarih: ${formatDate(selectedDate.toString())}",
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = dialogAmount,
-                        onValueChange = {
-                            dialogAmount = it
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = {
-                            Text("Tutar")
-                        },
-                        placeholder = {
-                            Text("Örn: 15000")
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    OutlinedTextField(
-                        value = dialogNote,
-                        onValueChange = {
-                            dialogNote = it
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = {
-                            Text("Açıklama")
-                        },
-                        placeholder = {
-                            Text(
-                                if (dialogType == "Gelir")
-                                    "Örn: Ek ödeme"
-                                else
-                                    "Örn: Kredi kartı"
-                            )
-                        },
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    OutlinedButton(
-                        onClick = {
-
-                            val date = selectedDate
-
-                            DatePickerDialog(
-                                context,
-                                { _, year, month, day ->
-                                    selectedDateText =
-                                        LocalDate.of(
-                                            year,
-                                            month + 1,
-                                            day
-                                        ).toString()
-                                },
-                                date.year,
-                                date.monthValue - 1,
-                                date.dayOfMonth
-                            ).show()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Tarihi Değiştir")
-                    }
-                }
-            },
-            confirmButton = {
-
-                TextButton(
-                    onClick = {
-
-                        val amount =
-                            dialogAmount
-                                .replace(",", ".")
-                                .toDoubleOrNull()
-
-                        if (amount != null && amount > 0) {
-
-                            records.add(
-                                BudgetRecord(
-                                    date = selectedDate.toString(),
-                                    type = dialogType,
-                                    amount = amount,
-                                    note = dialogNote.trim()
-                                )
-                            )
-
-                            saveRecords()
-
-                            showAddDialog = false
-                        }
-                    }
-                ) {
-                    Text("Kaydet")
-                }
-            },
-            dismissButton = {
-
-                TextButton(
-                    onClick = {
-                        showAddDialog = false
-                    }
-                ) {
-                    Text("İptal")
-                }
-            }
+@Composable
+private fun EmptyCard(text: String) {
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(15.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFEAE6EE)
+        )
+    ) {
+        Text(
+            text,
+            Modifier.padding(15.dp),
+            fontSize = 13.sp
         )
     }
 }
 
 @Composable
-fun CalendarCard(
+private fun PaymentRow(
+    record: BudgetRecord,
+    onPaid: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(15.dp),
+        colors = CardDefaults.cardColors(
+            containerColor =
+                if (record.paid) Color(0xFFEAF4EC)
+                else Color.White
+        )
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        record.note.ifBlank {
+                            if (record.type == "Gelir") "Gelir" else "脰deme"
+                        },
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        dateText(record.date),
+                        fontSize = 12.sp,
+                        color = Color(0xFF77737A)
+                    )
+                    if (record.installment.isNotBlank()) {
+                        Text(
+                            "Taksit: ${record.installment}",
+                            fontSize = 12.sp,
+                            color = Color(0xFF77737A)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(8.dp))
+
+                Text(
+                    if (record.type == "Gelir")
+                        "+ ${moneyStatic(record.amount)}"
+                    else
+                        "- ${moneyStatic(record.amount)}",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color =
+                        if (record.type == "Gelir")
+                            Color(0xFF2E7D32)
+                        else
+                            Color(0xFFC62828),
+                    maxLines = 1
+                )
+            }
+
+            if (record.type == "Gider") {
+                Spacer(Modifier.height(7.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    if (!record.paid) {
+                        Button(
+                            onClick = onPaid,
+                            Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("脰dendi", fontSize = 12.sp)
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onDelete,
+                        Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Sil", fontSize = 12.sp)
+                    }
+                }
+            } else {
+                Spacer(Modifier.height(5.dp))
+                TextButton(onClick = onDelete) {
+                    Text("Sil", fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+private fun moneyStatic(value: Double): String =
+    NumberFormat.getNumberInstance(Locale("tr", "TR")).apply {
+        minimumFractionDigits = 0
+        maximumFractionDigits = 2
+    }.format(value) + " 鈧�"
+
+@Composable
+private fun CalendarCard(
     month: YearMonth,
     records: List<BudgetRecord>,
     selectedDate: LocalDate,
     onDateSelected: (LocalDate) -> Unit
 ) {
-
     val days = month.lengthOfMonth()
-
-    val firstDay =
-        month.atDay(1).dayOfWeek.value % 7
-
-    val incomeDays =
-        records
-            .filter {
-                it.type == "Gelir"
-            }
-            .map {
-                LocalDate.parse(it.date)
-            }
-            .toSet()
-
-    val expenseDays =
-        records
-            .filter {
-                it.type == "Gider"
-            }
-            .map {
-                LocalDate.parse(it.date)
-            }
-            .toSet()
+    val firstColumn = month.atDay(1).dayOfWeek.value - 1
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFEDE8F0)
+            containerColor = Color(0xFFEAE6EE)
         )
     ) {
-
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-
+        Column(Modifier.padding(10.dp)) {
             Text(
-                text = "📆 Aylık Takvim",
-                fontSize = 23.sp,
+                "Ayl谋k Takvim",
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(15.dp))
+            Spacer(Modifier.height(7.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-
-                listOf(
-                    "Pzt",
-                    "Sal",
-                    "Çar",
-                    "Per",
-                    "Cum",
-                    "Cmt",
-                    "Paz"
-                ).forEach {
-
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.Center
-                    ) {
-
-                        Text(
-                            text = it,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
+            Row(Modifier.fillMaxWidth()) {
+                listOf("Pzt", "Sal", "脟ar", "Per", "Cum", "Cmt", "Paz")
+                    .forEach {
+                        Box(
+                            Modifier.weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                it,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
 
             var day = 1
-
-            for (week in 0..5) {
-
-                if (day > days) break
-
+            while (day <= days) {
                 Row(
-                    modifier = Modifier
+                    Modifier
                         .fillMaxWidth()
-                        .height(54.dp)
+                        .height(39.dp)
                 ) {
-
                     for (column in 0..6) {
+                        val position =
+                            if (day == 1) column else firstColumn + day - 1
 
-                        val position = week * 7 + column
-
-                        if (position < firstDay || day > days) {
-
-                            Spacer(
-                                modifier = Modifier.weight(1f)
-                            )
-
-                        } else {
-
-                            val currentDay =
-                                month.atDay(day)
-
-                            val isSelected =
-                                currentDay == selectedDate
-
-                            val hasIncome =
-                                currentDay in incomeDays
-
-                            val hasExpense =
-                                currentDay in expenseDays
+                        if (position < firstColumn && day == 1) {
+                            Spacer(Modifier.weight(1f))
+                        } else if (day <= days) {
+                            val current = month.atDay(day)
+                            val selected = current == selectedDate
+                            val hasIncome = records.any {
+                                it.date == current.toString() &&
+                                    it.type == "Gelir"
+                            }
+                            val hasExpense = records.any {
+                                it.date == current.toString() &&
+                                    it.type == "Gider"
+                            }
 
                             Box(
-                                modifier = Modifier
+                                Modifier
                                     .weight(1f)
                                     .fillMaxSize()
-                                    .padding(3.dp)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .padding(1.dp)
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(
-                                        if (isSelected)
-                                            Color(0xFFD9C9EA)
+                                        if (selected)
+                                            Color(0xFFD7C6E5)
                                         else
                                             Color.Transparent
                                     )
                                     .clickable {
-                                        onDateSelected(
-                                            currentDay
-                                        )
+                                        onDateSelected(current)
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-
                                 Column(
                                     horizontalAlignment =
-                                        Alignment.CenterHorizontally,
-                                    verticalArrangement =
-                                        Arrangement.Center
+                                        Alignment.CenterHorizontally
                                 ) {
-
                                     Text(
-                                        text = day.toString(),
-                                        fontSize = 16.sp,
+                                        day.toString(),
+                                        fontSize = 12.sp,
                                         fontWeight =
-                                            if (isSelected)
+                                            if (selected)
                                                 FontWeight.Bold
                                             else
                                                 FontWeight.Normal
                                     )
-
-                                    Row {
-
-                                        if (hasIncome) {
-
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(7.dp)
-                                                    .clip(CircleShape)
-                                                    .background(
-                                                        Color(0xFF72B943)
-                                                    )
-                                            )
-                                        }
-
-                                        if (hasIncome && hasExpense) {
-                                            Spacer(
-                                                modifier = Modifier.width(3.dp)
-                                            )
-                                        }
-
-                                        if (hasExpense) {
-
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(7.dp)
-                                                    .clip(CircleShape)
-                                                    .background(
-                                                        Color(0xFFF44336)
-                                                    )
-                                            )
-                                        }
+                                    Row(
+                                        horizontalArrangement =
+                                            Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        if (hasIncome) Dot(Color(0xFF65A93B))
+                                        if (hasExpense) Dot(Color(0xFFE53935))
                                     }
                                 }
                             }
-
                             day++
+                        } else {
+                            Spacer(Modifier.weight(1f))
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF72B943))
-                )
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                Text("Gelir")
-
-                Spacer(modifier = Modifier.width(18.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFF44336))
-                )
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                Text("Gider")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Dot(Color(0xFF65A93B))
+                Spacer(Modifier.width(4.dp))
+                Text("Gelir", fontSize = 10.sp)
+                Spacer(Modifier.width(12.dp))
+                Dot(Color(0xFFE53935))
+                Spacer(Modifier.width(4.dp))
+                Text("Gider", fontSize = 10.sp)
             }
         }
     }
 }
 
-fun formatDate(date: String): String {
+@Composable
+private fun Dot(color: Color) {
+    Box(
+        Modifier
+            .size(6.dp)
+            .clip(CircleShape)
+            .background(color)
+    )
+}
 
-    return try {
+@Composable
+private fun AddRecordDialog(
+    type: String,
+    amount: String,
+    note: String,
+    installment: String,
+    selectedDate: LocalDate,
+    onAmountChange: (String) -> Unit,
+    onNoteChange: (String) -> Unit,
+    onInstallmentChange: (String) -> Unit,
+    onDateChange: (LocalDate) -> Unit,
+    onDismiss: () -> Unit,
+    onSave: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
 
-        val parsed = LocalDate.parse(date)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                if (type == "Gelir") "Gelir Ekle" else "脰deme Ekle",
+                fontSize = 19.sp
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    "Tarih: ${dateText(selectedDate.toString())}",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-        String.format(
-            Locale("tr", "TR"),
-            "%02d.%02d.%04d",
-            parsed.dayOfMonth,
-            parsed.monthValue,
-            parsed.year
-        )
+                Spacer(Modifier.height(8.dp))
 
-    } catch (_: Exception) {
+                OutlinedTextField(
+                    value = amount,
+                    onValueChange = onAmountChange,
+                    Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("Tutar") },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal
+                    )
+                )
 
-        date
-    }
+                Spacer(Modifier.height(7.dp))
+
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = onNoteChange,
+                    Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = {
+                        Text(
+                            if (type == "Gelir")
+                                "Gelir ad谋"
+                            else
+                                "Kime / ne i莽in?"
+                        )
+                    }
+                )
+
+                if (type == "Gider") {
+                    Spacer(Modifier.height(7.dp))
+                    OutlinedTextField(
+                        value = installment,
+                        onValueChange = onInstallmentChange,
+                        Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Taksit (iste臒e ba臒l谋)") },
+                        placeholder = { Text("脰rn. 3/6") }
+                    )
+                }
+
+                Spacer(Modifier.height(7.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        DatePickerDialog(
+                            context,
+                            { _, year, month, day ->
+                                onDateChange(
+                                    LocalDate.of(year, month + 1, day)
+                                )
+                            },
+                            selectedDate.year,
+                            selectedDate.monthValue - 1,
+                            selectedDate.dayOfMonth
+                        ).show()
+                    },
+                    Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Tarihi De臒i艧tir", fontSize = 13.sp)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onSave) {
+                Text("Kaydet")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("陌ptal")
+            }
+        }
+    )
 }
