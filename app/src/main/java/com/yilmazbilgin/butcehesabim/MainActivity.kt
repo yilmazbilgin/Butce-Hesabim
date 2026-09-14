@@ -5,6 +5,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -200,19 +202,21 @@ class MainActivity : ComponentActivity() {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF7F6F8))
+                .statusBarsPadding()
+                .navigationBarsPadding()
                 .padding(horizontal = 12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
                 Text(
                     "B\u00fct\u00e7e Hesab\u0131m",
-                    fontSize = 23.sp,
+                    fontSize = 21.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     "Gelir, gider ve \u00f6demelerini takip et",
-                    fontSize = 13.sp,
+                    fontSize = 10.sp,
                     color = Color(0xFF66636A)
                 )
             }
@@ -220,12 +224,12 @@ class MainActivity : ComponentActivity() {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(11.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = Color(0xFFEAE6EE)
                     )
                 ) {
-                    Column(Modifier.padding(14.dp)) {
+                    Column(Modifier.padding(8.dp)) {
                         Row(
                             Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -233,7 +237,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Text(
                                 monthTitle,
-                                fontSize = 18.sp,
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -286,15 +290,15 @@ class MainActivity : ComponentActivity() {
             item {
                 Card(
                     Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp)
+                    shape = RoundedCornerShape(11.dp)
                 ) {
-                    Column(Modifier.padding(14.dp)) {
+                    Column(Modifier.padding(8.dp)) {
                         Text(
                             "Maa\u015f / Sabit Gelir",
-                            fontSize = 17.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        Spacer(Modifier.height(7.dp))
+                        Spacer(Modifier.height(3.dp))
                         OutlinedTextField(
                             value = salaryText,
                             onValueChange = { salaryText = it },
@@ -306,7 +310,7 @@ class MainActivity : ComponentActivity() {
                                 keyboardType = KeyboardType.Decimal
                             )
                         )
-                        Spacer(Modifier.height(7.dp))
+                        Spacer(Modifier.height(3.dp))
                         Button(
                             onClick = {
                                 prefs.edit()
@@ -319,7 +323,7 @@ class MainActivity : ComponentActivity() {
                             Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Maa\u015f\u0131 Kaydet", fontSize = 14.sp)
+                            Text("Maa\u015f\u0131 Kaydet", fontSize = 13.sp)
                         }
                     }
                 }
@@ -341,7 +345,7 @@ class MainActivity : ComponentActivity() {
                         Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("+ Gelir", fontSize = 14.sp)
+                        Text("+ Gelir", fontSize = 13.sp)
                     }
 
                     Button(
@@ -355,7 +359,7 @@ class MainActivity : ComponentActivity() {
                         Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("+ Gider", fontSize = 14.sp)
+                        Text("+ Gider", fontSize = 13.sp)
                     }
                 }
             }
@@ -430,7 +434,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            item { Spacer(Modifier.height(20.dp)) }
+            item { Spacer(Modifier.height(8.dp)) }
         }
 
         if (showDialog) {
@@ -479,21 +483,21 @@ private fun SummaryBox(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(13.dp),
+        shape = RoundedCornerShape(11.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(
-            Modifier.padding(9.dp),
+            Modifier.padding(7.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 title,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 color = Color(0xFF66636A)
             )
             Text(
                 value,
-                fontSize = 15.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = valueColor,
                 maxLines = 1,
@@ -507,7 +511,7 @@ private fun SummaryBox(
 private fun SectionTitle(text: String) {
     Text(
         text,
-        fontSize = 18.sp,
+        fontSize = 16.sp,
         fontWeight = FontWeight.Bold
     )
     Spacer(Modifier.height(3.dp))
@@ -517,7 +521,7 @@ private fun SectionTitle(text: String) {
 private fun EmptyCard(text: String) {
     Card(
         Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(15.dp),
+        shape = RoundedCornerShape(11.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFEAE6EE)
         )
@@ -525,7 +529,7 @@ private fun EmptyCard(text: String) {
         Text(
             text,
             Modifier.padding(15.dp),
-            fontSize = 13.sp
+            fontSize = 10.sp
         )
     }
 }
@@ -538,14 +542,14 @@ private fun PaymentRow(
 ) {
     Card(
         Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(15.dp),
+        shape = RoundedCornerShape(11.dp),
         colors = CardDefaults.cardColors(
             containerColor =
                 if (record.paid) Color(0xFFEAF4EC)
                 else Color.White
         )
     ) {
-        Column(Modifier.padding(12.dp)) {
+        Column(Modifier.padding(7.dp)) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -556,20 +560,20 @@ private fun PaymentRow(
                         record.note.ifBlank {
                             if (record.type == "Gelir") "Gelir" else "\u00d6deme"
                         },
-                        fontSize = 15.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         dateText(record.date),
-                        fontSize = 12.sp,
+                        fontSize = 10.sp,
                         color = Color(0xFF77737A)
                     )
                     if (record.installment.isNotBlank()) {
                         Text(
                             "Taksit: ${record.installment}",
-                            fontSize = 12.sp,
+                            fontSize = 10.sp,
                             color = Color(0xFF77737A)
                         )
                     }
@@ -582,7 +586,7 @@ private fun PaymentRow(
                         "+ ${moneyStatic(record.amount)}"
                     else
                         "- ${moneyStatic(record.amount)}",
-                    fontSize = 15.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color =
                         if (record.type == "Gelir")
@@ -594,7 +598,7 @@ private fun PaymentRow(
             }
 
             if (record.type == "Gider") {
-                Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(3.dp))
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(7.dp)
@@ -605,7 +609,7 @@ private fun PaymentRow(
                             Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp)
                         ) {
-                            Text("\u00d6dendi", fontSize = 12.sp)
+                            Text("\u00d6dendi", fontSize = 10.sp)
                         }
                     }
 
@@ -614,13 +618,13 @@ private fun PaymentRow(
                         Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("Sil", fontSize = 12.sp)
+                        Text("Sil", fontSize = 10.sp)
                     }
                 }
             } else {
-                Spacer(Modifier.height(5.dp))
+                Spacer(Modifier.height(3.dp))
                 TextButton(onClick = onDelete) {
-                    Text("Sil", fontSize = 12.sp)
+                    Text("Sil", fontSize = 10.sp)
                 }
             }
         }
@@ -645,19 +649,19 @@ private fun CalendarCard(
 
     Card(
         Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(11.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFFEAE6EE)
         )
     ) {
-        Column(Modifier.padding(10.dp)) {
+        Column(Modifier.padding(8.dp)) {
             Text(
                 "Ayl\u0131k Takvim",
-                fontSize = 17.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(Modifier.height(7.dp))
+            Spacer(Modifier.height(3.dp))
 
             Row(Modifier.fillMaxWidth()) {
                 listOf("Pzt", "Sal", "\u00c7ar", "Per", "Cum", "Cmt", "Paz")
@@ -675,14 +679,14 @@ private fun CalendarCard(
                     }
             }
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(3.dp))
 
             var day = 1
             while (day <= days) {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .height(39.dp)
+                        .height(32.dp)
                 ) {
                     for (column in 0..6) {
                         val position =
@@ -725,7 +729,7 @@ private fun CalendarCard(
                                 ) {
                                     Text(
                                         day.toString(),
-                                        fontSize = 12.sp,
+                                        fontSize = 10.sp,
                                         fontWeight =
                                             if (selected)
                                                 FontWeight.Bold
@@ -749,7 +753,7 @@ private fun CalendarCard(
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(3.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Dot(Color(0xFF65A93B))
@@ -802,7 +806,7 @@ private fun AddRecordDialog(
             Column {
                 Text(
                     "Tarih: ${dateText(selectedDate.toString())}",
-                    fontSize = 13.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold
                 )
 
@@ -819,7 +823,7 @@ private fun AddRecordDialog(
                     )
                 )
 
-                Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(3.dp))
 
                 OutlinedTextField(
                     value = note,
@@ -837,7 +841,7 @@ private fun AddRecordDialog(
                 )
 
                 if (type == "Gider") {
-                    Spacer(Modifier.height(7.dp))
+                    Spacer(Modifier.height(3.dp))
                     OutlinedTextField(
                         value = installment,
                         onValueChange = onInstallmentChange,
@@ -848,7 +852,7 @@ private fun AddRecordDialog(
                     )
                 }
 
-                Spacer(Modifier.height(7.dp))
+                Spacer(Modifier.height(3.dp))
 
                 OutlinedButton(
                     onClick = {
@@ -867,7 +871,7 @@ private fun AddRecordDialog(
                     Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Tarihi De\u011fi\u015ftir", fontSize = 13.sp)
+                    Text("Tarihi De\u011fi\u015ftir", fontSize = 10.sp)
                 }
             }
         },
