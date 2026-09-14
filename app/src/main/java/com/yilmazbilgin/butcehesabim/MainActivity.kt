@@ -229,7 +229,7 @@ class MainActivity : ComponentActivity() {
                         containerColor = Color(0xFFEAE6EE)
                     )
                 ) {
-                    Column(Modifier.padding(8.dp)) {
+                    Column(Modifier.padding(horizontal = 9.dp, vertical = 7.dp)) {
                         Row(
                             Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -487,7 +487,7 @@ private fun SummaryBox(
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(
-            Modifier.padding(7.dp),
+            Modifier.padding(horizontal = 7.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
@@ -511,7 +511,7 @@ private fun SummaryBox(
 private fun SectionTitle(text: String) {
     Text(
         text,
-        fontSize = 16.sp,
+        fontSize = 15.sp,
         fontWeight = FontWeight.Bold
     )
     Spacer(Modifier.height(3.dp))
@@ -657,11 +657,11 @@ private fun CalendarCard(
         Column(Modifier.padding(8.dp)) {
             Text(
                 "Ayl\u0131k Takvim",
-                fontSize = 16.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            Spacer(Modifier.height(3.dp))
+            Spacer(Modifier.height(2.dp))
 
             Row(Modifier.fillMaxWidth()) {
                 listOf("Pzt", "Sal", "\u00c7ar", "Per", "Cum", "Cmt", "Paz")
@@ -686,7 +686,7 @@ private fun CalendarCard(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .height(32.dp)
+                        .height(29.dp)
                 ) {
                     for (column in 0..6) {
                         val position =
