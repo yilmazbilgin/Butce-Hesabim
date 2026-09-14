@@ -35,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -134,22 +135,22 @@ class MainActivity : ComponentActivity() {
             if (record.type != "Gider") continue
 
             val raw = record.installment.trim()
-            val hasSlash = raw.contains("/")
-            val totalParts = if (hasSlash) {
-                raw.substringAfterLast("/").toIntOrNull()
-            } else {
-                raw.toIntOrNull()
-            } ?: continue
+            if (raw.isBlank()) continue
 
-            if (totalParts <= 1) continue
+            val slash = raw.indexOf("/")
+            val totalParts: Int
+            val currentPart: Int
 
-            val currentPart = if (hasSlash) {
-                raw.substringBefore("/").toIntOrNull() ?: 1
+            if (slash >= 0) {
+                currentPart = raw.substring(0, slash).trim().toIntOrNull() ?: 1
+                totalParts = raw.substring(slash + 1).trim().toIntOrNull() ?: continue
             } else {
-                1
+                // A plain "8" means 8 total installments and this record is 1/8.
+                currentPart = 1
+                totalParts = raw.toIntOrNull() ?: continue
             }
 
-            if (currentPart < 1 || currentPart > totalParts) continue
+            if (totalParts <= 1 || currentPart !in 1..totalParts) continue
 
             val baseDate = try {
                 LocalDate.parse(record.date)
@@ -157,47 +158,50 @@ class MainActivity : ComponentActivity() {
                 continue
             }
 
-            var part = currentPart + 1
-            while (part <= totalParts) {
-                val futureDate = baseDate.plusMonths((part - currentPart).toLong())
-                val exists = records.any {
-                    it.type == "Gider" &&
-                    it.date == futureDate.toString() &&
-                    it.note == record.note &&
-                    kotlin.math.abs(it.amount - record.amount) < 0.01 &&
-                    it.installment == "$part/$totalParts"
-                } || additions.any {
-                    it.type == "Gider" &&
-                    it.date == futureDate.toString() &&
-                    it.note == record.note &&
-                    kotlin.math.abs(it.amount - record.amount) < 0.01 &&
-                    it.installment == "$part/$totalParts"
-                }
+            val normalized = "$currentPart/$totalParts"
+            val originalIndex = records.indexOfFirst { it.id == record.id }
+            if (originalIndex >= 0 && record.installment != normalized) {
+                records[originalIndex] = record.copy(installment = normalized)
+            }
 
-                if (!exists) {
+            for (part in (currentPart + 1)..totalParts) {
+                val futureDate =
+                    baseDate.plusMonths((part - currentPart).toLong())
+                val installmentLabel = "$part/$totalParts"
+
+                val alreadyExists =
+                    records.any {
+                        it.type == "Gider" &&
+                        it.date == futureDate.toString() &&
+                        it.note == record.note &&
+                        kotlin.math.abs(it.amount - record.amount) < 0.01 &&
+                        it.installment == installmentLabel
+                    } ||
+                    additions.any {
+                        it.type == "Gider" &&
+                        it.date == futureDate.toString() &&
+                        it.note == record.note &&
+                        kotlin.math.abs(it.amount - record.amount) < 0.01 &&
+                        it.installment == installmentLabel
+                    }
+
+                if (!alreadyExists) {
                     additions.add(
                         record.copy(
-                            id = record.id + part.toLong() * 1000000L,
+                            id = System.currentTimeMillis() +
+                                additions.size.toLong() + part.toLong() * 1000000L,
                             date = futureDate.toString(),
                             paid = false,
-                            installment = "$part/$totalParts"
+                            installment = installmentLabel
                         )
                     )
                 }
-                part++
-            }
-
-            // Normalize the first installment label when it was entered as just "8".
-            val index = records.indexOfFirst { it.id == record.id }
-            if (index >= 0 && !raw.contains("/")) {
-                records[index] = records[index].copy(
-                    installment = "$currentPart/$totalParts"
-                )
             }
         }
 
         records.addAll(additions)
     }
+
 
     private fun saveRecords(records: List<BudgetRecord>) {
         val array = JSONArray()
@@ -245,6 +249,17 @@ class MainActivity : ComponentActivity() {
         val selectedDate = LocalDate.parse(selectedDateText)
         val prefix = month.toString()
 
+        LaunchedEffect(Unit) {
+            val before = records.size
+            expandInstallments(records)
+            if (records.size != before) {
+                saveRecords(records)
+            } else {
+                // Also persist normalization such as 8 -> 1/8.
+                saveRecords(records)
+            }
+        }
+
         val monthRecords = records.filter { it.date.startsWith(prefix) }
         val expenses = monthRecords.filter { it.type == "Gider" }
         val incomes = monthRecords.filter { it.type == "Gelir" }
@@ -268,6 +283,8 @@ class MainActivity : ComponentActivity() {
         ).replaceFirstChar { it.uppercase(Locale("tr", "TR")) }
 
         fun changeMonth(delta: Long) {
+            expandInstallments(records)
+            saveRecords(records)
             val next = month.plusMonths(delta)
             monthText = next.toString()
             selectedDateText = next.atDay(1).toString()
@@ -540,6 +557,7 @@ class MainActivity : ComponentActivity() {
                                 installment = dialogInstallment.trim()
                             )
                         )
+                        expandInstallments(records)
                         saveRecords(records)
                         showDialog = false
                     }
