@@ -56,6 +56,20 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+private fun dateText(date: String): String {
+    return try {
+        val d = LocalDate.parse(date)
+        "%02d.%02d.%04d".format(
+            Locale("tr", "TR"),
+            d.dayOfMonth,
+            d.monthValue,
+            d.year
+        )
+    } catch (_: Exception) {
+        date
+    }
+}
+
 data class BudgetRecord(
     val id: Long,
     val date: String,
@@ -130,21 +144,7 @@ class MainActivity : ComponentActivity() {
         NumberFormat.getNumberInstance(Locale("tr", "TR")).apply {
             minimumFractionDigits = 0
             maximumFractionDigits = 2
-        }.format(value) + " 鈧�"
-
-    private fun dateText(date: String): String {
-        return try {
-            val d = LocalDate.parse(date)
-            "%02d.%02d.%04d".format(
-                Locale("tr", "TR"),
-                d.dayOfMonth,
-                d.monthValue,
-                d.year
-            )
-        } catch (_: Exception) {
-            date
-        }
-    }
+        }.format(value) + " \u20ba"
 
     @Composable
     private fun BudgetApp() {
@@ -206,12 +206,12 @@ class MainActivity : ComponentActivity() {
             item {
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "B眉t莽e Hesab谋m",
+                    "B\u00fct\u00e7e Hesab\u0131m",
                     fontSize = 23.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    "Gelir, gider ve 枚demelerini takip et",
+                    "Gelir, gider ve \u00f6demelerini takip et",
                     fontSize = 13.sp,
                     color = Color(0xFF66636A)
                 )
@@ -238,10 +238,10 @@ class MainActivity : ComponentActivity() {
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 TextButton({ changeMonth(-1) }) {
-                                    Text("鈥�", fontSize = 24.sp)
+                                    Text("\u2039", fontSize = 24.sp)
                                 }
                                 TextButton({ changeMonth(1) }) {
-                                    Text("鈥�", fontSize = 24.sp)
+                                    Text("\u203a", fontSize = 24.sp)
                                 }
                             }
                         }
@@ -290,7 +290,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Column(Modifier.padding(14.dp)) {
                         Text(
-                            "Maa艧 / Sabit Gelir",
+                            "Maa\u015f / Sabit Gelir",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -300,8 +300,8 @@ class MainActivity : ComponentActivity() {
                             onValueChange = { salaryText = it },
                             Modifier.fillMaxWidth(),
                             singleLine = true,
-                            label = { Text("Ayl谋k gelir") },
-                            placeholder = { Text("脰rn. 66565") },
+                            label = { Text("Ayl\u0131k gelir") },
+                            placeholder = { Text("\u00d6rn. 66565") },
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Decimal
                             )
@@ -319,7 +319,7 @@ class MainActivity : ComponentActivity() {
                             Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Maa艧谋 Kaydet", fontSize = 14.sp)
+                            Text("Maa\u015f\u0131 Kaydet", fontSize = 14.sp)
                         }
                     }
                 }
@@ -361,7 +361,7 @@ class MainActivity : ComponentActivity() {
             }
 
             item {
-                SectionTitle("Yakla艧an 脰demeler")
+                SectionTitle("Yakla\u015fan \u00d6demeler")
 
                 val today = LocalDate.now()
                 val upcoming = records
@@ -374,7 +374,7 @@ class MainActivity : ComponentActivity() {
                     .take(5)
 
                 if (upcoming.isEmpty()) {
-                    EmptyCard("Yakla艧an bekleyen 枚deme yok.")
+                    EmptyCard("Yakla\u015fan bekleyen \u00f6deme yok.")
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         upcoming.forEach { record ->
@@ -400,10 +400,10 @@ class MainActivity : ComponentActivity() {
             }
 
             item {
-                SectionTitle("Bu Ay谋n Kay谋tlar谋")
+                SectionTitle("Bu Ay\u0131n Kay\u0131tlar\u0131")
 
                 if (monthRecords.isEmpty()) {
-                    EmptyCard("Bu ay hen眉z kay谋t yok.")
+                    EmptyCard("Bu ay hen\u00fcz kay\u0131t yok.")
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         monthRecords
@@ -554,7 +554,7 @@ private fun PaymentRow(
                 Column(Modifier.weight(1f)) {
                     Text(
                         record.note.ifBlank {
-                            if (record.type == "Gelir") "Gelir" else "脰deme"
+                            if (record.type == "Gelir") "Gelir" else "\u00d6deme"
                         },
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
@@ -605,7 +605,7 @@ private fun PaymentRow(
                             Modifier.weight(1f),
                             shape = RoundedCornerShape(10.dp)
                         ) {
-                            Text("脰dendi", fontSize = 12.sp)
+                            Text("\u00d6dendi", fontSize = 12.sp)
                         }
                     }
 
@@ -631,7 +631,7 @@ private fun moneyStatic(value: Double): String =
     NumberFormat.getNumberInstance(Locale("tr", "TR")).apply {
         minimumFractionDigits = 0
         maximumFractionDigits = 2
-    }.format(value) + " 鈧�"
+    }.format(value) + " \u20ba"
 
 @Composable
 private fun CalendarCard(
@@ -652,7 +652,7 @@ private fun CalendarCard(
     ) {
         Column(Modifier.padding(10.dp)) {
             Text(
-                "Ayl谋k Takvim",
+                "Ayl\u0131k Takvim",
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -660,7 +660,7 @@ private fun CalendarCard(
             Spacer(Modifier.height(7.dp))
 
             Row(Modifier.fillMaxWidth()) {
-                listOf("Pzt", "Sal", "脟ar", "Per", "Cum", "Cmt", "Paz")
+                listOf("Pzt", "Sal", "\u00c7ar", "Per", "Cum", "Cmt", "Paz")
                     .forEach {
                         Box(
                             Modifier.weight(1f),
@@ -794,7 +794,7 @@ private fun AddRecordDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                if (type == "Gelir") "Gelir Ekle" else "脰deme Ekle",
+                if (type == "Gelir") "Gelir Ekle" else "\u00d6deme Ekle",
                 fontSize = 19.sp
             )
         },
@@ -829,9 +829,9 @@ private fun AddRecordDialog(
                     label = {
                         Text(
                             if (type == "Gelir")
-                                "Gelir ad谋"
+                                "Gelir ad\u0131"
                             else
-                                "Kime / ne i莽in?"
+                                "Kime / ne i\u00e7in?"
                         )
                     }
                 )
@@ -843,8 +843,8 @@ private fun AddRecordDialog(
                         onValueChange = onInstallmentChange,
                         Modifier.fillMaxWidth(),
                         singleLine = true,
-                        label = { Text("Taksit (iste臒e ba臒l谋)") },
-                        placeholder = { Text("脰rn. 3/6") }
+                        label = { Text("Taksit (iste\u011fe ba\u011fl\u0131)") },
+                        placeholder = { Text("\u00d6rn. 3/6") }
                     )
                 }
 
@@ -867,7 +867,7 @@ private fun AddRecordDialog(
                     Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Tarihi De臒i艧tir", fontSize = 13.sp)
+                    Text("Tarihi De\u011fi\u015ftir", fontSize = 13.sp)
                 }
             }
         },
@@ -878,7 +878,7 @@ private fun AddRecordDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("陌ptal")
+                Text("\u0130ptal")
             }
         }
     )
